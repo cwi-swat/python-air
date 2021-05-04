@@ -13,7 +13,7 @@ data Module
   | \functionType(list[Expression] argTypes, Expression returns)
   ;
 
-data Statement(int lineno = -1, int colOffset = -1, int endLineno = lineno, int endColOffset = colOffset, loc src=|unknown:///|)
+data Statement(loc src=|unknown:///|)
   = functionDef(Identifier name, Arguments args, list[Statement] body, list[Expression] decorators, Maybe[Expression] returns, Maybe[str] typeComment)
   | asyncFunctionDef(Identifier name, Arguments args, list[Statement] body, list[Expression] decorators, Maybe[Expression] returns, Maybe[str] typeComment)
   | classDef(Identifier name, list[Expression] bases, list[Keyword] keywords, list[Statement] body, list[Expression] decorators)
@@ -41,9 +41,7 @@ data Statement(int lineno = -1, int colOffset = -1, int endLineno = lineno, int 
   | \continue()
   ;
 
-
-
-data Expression (int lineno = -1, int colOffset = -1, int endLineno = lineno, int endColOffset = colOffset, loc src=|unknown:///|)
+data Expression(loc src=|unknown:///|)
   = boolop(BoolOp boolop, list[Expression] values)
   | namedExpr(Expression target, Expression \value)
   | binOp(Expression \left, Operator binop, Expression \right)
@@ -124,16 +122,16 @@ data CmpOp
 
 data Comprehension = comprehension(Expression target, Expression iter, list[Expression] ifs, int isAsync);
 
-data ExceptHandler(int lineno=-1, int colOffset=-1, int endLineno=lineno, int endColOffset=colOffset) 
+data ExceptHandler(loc src = |unknown:///|) 
   = exceptHandler(Maybe[Expression] \type, Maybe[Identifier] name, list[Statement] body);
 
 data Arguments 
   = arguments(list[Arg] posonlyargs, list[Arg] args, Maybe[Arg] varargs, list[Arg] kwonlyargs, list[Expression] kw_defaults, Maybe[Arg] kwarg, list[Expression] defaults);
 
-data Arg(int lineno=-1, int colOffset = -1, int endLineno=lineno, int endColOffset=colOffset) 
+data Arg(loc src = |unknown:///|) 
   = arg(Identifier arg, Maybe[Expression] annotations, Maybe[str] typeComment);
 
-data Keyword(int lineno=-1, int colOffset = -1, int endLineno=lineno, int endColOffset=colOffset) 
+data Keyword(loc src = |unknown:///|) 
   = \keyword(Identifier arg, Expression \value);
 
 data Alias 
@@ -144,3 +142,13 @@ data WithItem
 
 data TypeIgnore 
   = typeIgnore(int lineno, str \tag);
+
+data Constant
+  = none()
+  | number(num n)
+  | string(str s)
+  | \tupleConst(list[Constant] elts)
+  | \setConst(list[Constant] elts)
+  | \listConst(list[Constant] elts)
+  | \dictConst(list[Constant] keys, list[Constant] values)
+  ;
