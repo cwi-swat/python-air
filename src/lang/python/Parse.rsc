@@ -30,7 +30,7 @@ public Expression parsePythonExpression(str input, loc src) {
 }
 node importAST(str input) {
     tempDir = |file:///| + getSystemProperty("java.io.tmpdir");
-    
+
     pythonParserFile = tempDir + "parsePython.py";
     pythonInputFile = tempDir + "pythonInputFile.py";
 
@@ -52,14 +52,33 @@ Expression convertExp(node obj:"object"(_type=str typ), loc src)
 
 Expression convertExp("Expression", node obj, loc src) = convertExp(obj.body, src);
 
-Expression convertExp("BinOp", "object"(op="object"(_type="Add"), \left=node lhs, \right=node rhs), loc src) 
-    = binOp(convertExp(lhs, src), add(), convertExp(rhs, src));
+Expression convertExp("BinOp", "object"(op=node op, \left=node lhs, \right=node rhs), loc src) 
+    = convertOp(op._type, convertExp(lhs, src), convertExp(rhs, src));
+
+Expression convertExp("UnaryOp", "object"(op=node op, operand=node arg), loc src) 
+    = convertOp(op._type, convertExp(arg, src));    
+
+Expression convertOp("Add", Expression l, Expression r) = add(l, r);
+Expression convertOp("Sub", Expression l, Expression r) = sub(l, r);
+Expression convertOp("Mult", Expression l, Expression r) = mult(l, r);
+Expression convertOp("MatMult", Expression l, Expression r) = matmult(l, r);
+Expression convertOp("Mod", Expression l, Expression r) = \mod(l, r);
+Expression convertOp("Pow", Expression l, Expression r) = pow(l, r);
+Expression convertOp("Div", Expression l, Expression r) = \div(l, r);
+Expression convertOp("LShift", Expression l, Expression r) = lshift(l, r);
+Expression convertOp("RShift", Expression l, Expression r) = rshift(l, r);
+Expression convertOp("BitOr", Expression l, Expression r) = bitor(l, r);
+Expression convertOp("BitXor", Expression l, Expression r) = bitxor(l, r);
+Expression convertOp("BitAnd", Expression l, Expression r) = bitand(l, r);
+Expression convertOp("FloorDiv", Expression l, Expression r) = floordiv(l, r);
+
+Expression convertOp("Invert", Expression a) = invert(a);
+Expression convertOp("Not", Expression a) = \not(a);
+Expression convertOp("UAdd", Expression a) = uadd(a);
+Expression convertOp("USub", Expression a) = usub(a);
 
 Expression convertExp("Constant", "object"(\value=num v), loc src) = constant(number(v), nothing());
-
-
-
-
+Expression convertExp("Constant", "object"(\value=str s), loc src) = constant(string(s), nothing());
 
 private str pythonParserCode()
     = "import io
