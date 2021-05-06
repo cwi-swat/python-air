@@ -85,21 +85,21 @@ Expression convertExp("UnaryOp", "object"(op=node op, operand=node arg), loc src
 
 Expression convertExp("Name", "object"(ctx=node c, id=str n), loc src) = name(id(n), convertCtx(c));
 
-Expression convertExp("Call", node obj, loc src) 
+Expression convertExp("Call", "object"(func=node f, args=list[node] as, keywords=list[node] kws), loc src) 
     = call(
-        convertExp(obj.func, src), 
-        [convertExp(a, src) | a <- cast(#list[node], obj.args)], 
-        [convertKeyword(kw, src) | kw <- cast(#list[node], obj.keywords) ] 
+        convertExp(f, src), 
+        [convertExp(a, src) | a <- as], 
+        [convertKeyword(kw, src) | kw <- kws] 
     );
 
-Expression convertExp("List", node obj, loc src) 
-    = \list([convertExp(e, src) | e <- cast(#list[node], obj.elts)], convertCtx(obj.ctx));
+Expression convertExp("List", "object"(elts=list[node] elts, ctx=node ctx), loc src) 
+    = \list([convertExp(e, src) | e <- elts], convertCtx(ctx));
 
-Expression convertExp("Set", node obj, loc src) 
-    = \set([convertExp(e, src) | e <- cast(#list[node], obj.elts)]);
+Expression convertExp("Set", "object"(elts=list[node] elts), loc src) 
+    = \set([convertExp(e, src) | e <- elts]);
 
-Expression convertExp("Dict", node obj, loc src) 
-    = \dict([convertExp(e, src) | e <- cast(#list[node], obj.keys)], [convertExp(e, src) | e <- cast(#list[node], obj.values)]);    
+Expression convertExp("Dict",  "object"(keys=list[node] keys, values=list[node] values), loc src) 
+    = \dict([convertExp(e, src) | e <- keys], [convertExp(e, src) | e <- values]);    
 
 Expression convertExp("BoolOp", "object"(op="object"(_type="And"), values=list[node] vs), loc src)
     = and([convertExp(v, src) | v <- vs]);
