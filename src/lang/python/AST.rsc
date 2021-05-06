@@ -54,9 +54,13 @@ data Statement(loc src=|unknown:///|)
   ;
 
 data Expression(loc src=|unknown:///|)
-  = boolop(BoolOp boolop, list[Expression] values)
-  | namedExpr(Expression target, Expression \value)
-  | add(Expression lhs, Expression rhs) 
+  = and(list[Expression] values)
+  | or(list[Expression] values)
+  ;
+
+// Binary operators
+data Expression
+  = add(Expression lhs, Expression rhs) 
   | sub(Expression lhs, Expression rhs) 
   | mult(Expression lhs, Expression rhs) 
   | matmult(Expression lhs, Expression rhs) 
@@ -73,7 +77,11 @@ data Expression(loc src=|unknown:///|)
   | \not(Expression operand) 
   | uadd(Expression operand) 
   | usub(Expression operand)
-  | lambda(Arguments formals, Expression body)
+  ;
+
+data Expression
+  = lambda(Arguments formals, Expression body)
+  | namedExpr(Expression target, Expression \value)
   | ifExp(Expression \test, Expression body, Expression orelse)
   | dict(list[Expression] keys, list[Expression] values)
   | \set(list[Expression] elts)
@@ -89,26 +97,27 @@ data Expression(loc src=|unknown:///|)
   | formattedValue(Expression \value, Maybe[int] conversion, Maybe[Expression] formatSpec)
   | joinedStr(list[Expression] values)
   | constant(Constant \const, Maybe[str] kind)
-//          -- the following expression can appear in assignment context  
-  | attribute(Expression \value, Identifier attr, ExprContext ctx)
+  ;
+
+// The following expression can appear only in assignment context  
+data Expression
+  = attribute(Expression \value, Identifier attr, ExprContext ctx)
   | subscript(Expression \value, Expression slice, ExprContext ctx)
   | starred(Expression \value, ExprContext ctx)
   | name(Identifier id, ExprContext ctx)
   | \list(list[Expression] elts, ExprContext ctx)
   | \tuple(list[Expression] elts, ExprContext ctx)
-//          -- can appear only in Subscript
-  | \slice(Maybe[Expression] lower, Maybe[Expression] upper, Maybe[Expression] step)
+  ;
+
+// Can appear only in Subscript
+data Expression 
+  = \slice(Maybe[Expression] lower, Maybe[Expression] upper, Maybe[Expression] step)
   ;
 
 data ExprContext 
   = \load() 
   | store() 
   | del()
-  ;
-
-data BoolOp 
-  = and() 
-  | or()
   ;
 
 data CmpOp 
