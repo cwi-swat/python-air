@@ -14,10 +14,10 @@ data Module
   ;
 
 data Statement(loc src=|unknown:///|)
-  = functionDef(Identifier name, Arguments args, list[Statement] body, list[Expression] decorators, Maybe[Expression] returns, Maybe[str] typeComment)
-  | asyncFunctionDef(Identifier name, Arguments args, list[Statement] body, list[Expression] decorators, Maybe[Expression] returns, Maybe[str] typeComment)
+  = functionDef(Identifier name, Arguments formals, list[Statement] body, list[Expression] decorators, Maybe[Expression] returns, Maybe[str] typeComment)
+  | asyncFunctionDef(Identifier name, Arguments formals, list[Statement] body, list[Expression] decorators, Maybe[Expression] returns, Maybe[str] typeComment)
   | classDef(Identifier name, list[Expression] bases, list[Keyword] keywords, list[Statement] body, list[Expression] decorators)
-  | \return(Maybe[Expression] \value)
+  | \return(Maybe[Expression] optValue)
   | delete(list[Expression] targets)
   | assign(list[Expression] targets, Expression \val, Maybe[str] typeComment)
   | augAssign(Expression target, Operator op, Expression \val)
@@ -31,8 +31,8 @@ data Statement(loc src=|unknown:///|)
   | raise(Maybe[Expression] exc, Maybe[Expression] cause)
   | \try(list[Statement] body, list[ExceptHandler] handlers, list[Statement] orElse, list[Statement] finalBody)
   | \assert(Expression \test, Maybe[Expression] msg)
-  | \import(list[Alias] names)
-  | importFrom(Maybe[Identifier] \module, list[Alias] names, Maybe[int] level)
+  | \import(list[Alias] aliases)
+  | importFrom(Maybe[Identifier] \module, list[Alias] aliases, Maybe[int] level)
   | global(list[Identifier] names)
   | nonlocal(list[Identifier] names)
   | expr(Expression \value)
@@ -46,7 +46,7 @@ data Expression(loc src=|unknown:///|)
   | namedExpr(Expression target, Expression \value)
   | binOp(Expression \left, Operator binop, Expression \right)
   | unaryOp(UnaryOp unaryOp, Expression operand)
-  | lambda(Arguments args, Expression body)
+  | lambda(Arguments formals, Expression body)
   | ifExp(Expression \test, Expression body, Expression orelse)
   | dict(list[Expression] keys, list[Expression] values)
   | \set(list[Expression] elts)
@@ -123,7 +123,7 @@ data CmpOp
 data Comprehension = comprehension(Expression target, Expression iter, list[Expression] ifs, int isAsync);
 
 data ExceptHandler(loc src = |unknown:///|) 
-  = exceptHandler(Maybe[Expression] \type, Maybe[Identifier] name, list[Statement] body);
+  = exceptHandler(Maybe[Expression] \type, Maybe[Identifier] optName, list[Statement] body);
 
 data Arguments 
   = arguments(list[Arg] posonlyargs, list[Arg] args, Maybe[Arg] varargs, list[Arg] kwonlyargs, list[Expression] kw_defaults, Maybe[Arg] kwarg, list[Expression] defaults);
