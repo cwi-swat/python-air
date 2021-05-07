@@ -68,9 +68,8 @@ public Module parsePythonModule(str input, loc src)
     = convertModule(importAST(input), src);
 
 @synopsis="parses a python module producing an AST of type Module"
-public Module parsePythonModule(loc src) {
-    return convertModule(importAST(readFile(src)), src);
-}
+public Module parsePythonModule(loc src) 
+    = convertModule(importAST(readFile(src)), src);
 
 @synopsis="wraps the python ast library as an external system process"
 @description{
@@ -90,8 +89,7 @@ node importAST(str input) {
     pythonParserFile = tempDir + "parsePython.py";
     pythonInputFile = tempDir + "pythonInputFile.py";
 
-    if (!exists(pythonParserFile))
-        writeFile(pythonParserFile, pythonParserCode());
+    writeFile(pythonParserFile, pythonParserCode());
     
     writeFile(pythonInputFile, input);
 
@@ -122,7 +120,7 @@ Statement convertStat(node obj:"object"(_type=str typ), loc src)
             ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
             : src];
 
-Statement convertStat("Expression", node obj, loc src)
+Statement convertStat("Expr", node obj, loc src)
     = expr(convertExp(obj, src));
 
 Statement convertStat("FunctionDef",
@@ -312,7 +310,7 @@ Statement convertStat("Try",
 Statement convertStat("Assert", node obj:"object"(\test=node t), loc src)
     = \assert(convertExp(t, src), obj.msg? ? just(convertExp(obj.msg, src)) : nothing());
 
-Statement convertStat("Import", "object"(aliases=list[node] aliases), loc src)
+Statement convertStat("Import", "object"(names=list[node] aliases), loc src)
     = \import([convertAlias(a) | a <- aliases]);
 
 Statement convertStat("ImportFrom", node obj:"object"(aliases=list[node] aliases), loc src)
@@ -338,6 +336,8 @@ Expression convertExp(node obj:"object"(_type=str typ), loc src)
         [src=obj has lineno 
             ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset)
             : src];
+
+Expression convertExp("Expr", node obj, loc src) = convertExp(obj.\value, src);
 
 Expression convertExp("Expression", node obj, loc src) = convertExp(obj.body, src);
 
@@ -551,8 +551,6 @@ Arg convertArg(
             : src]
     ;
 
-
-
 TypeIgnore convertTypeIgnore("object"(_type="TypeIgnore", lineno=int l, \tag=str t))
     = typeIgnore(l, t);
 
@@ -590,7 +588,7 @@ private str pythonParserCode()
       'with open (sys.argv[1], \"r\") as aFile:
       '   data=aFile.read()
       '
-      'theAst = ast.parse(data, mode=\"eval\")
+      'theAst = ast.parse(data)
       'theAstAsJson = ast2json(theAst)
       'theJsonAstAsString = json.dumps(theAstAsJson)
       '
