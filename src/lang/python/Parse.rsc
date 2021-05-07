@@ -113,11 +113,19 @@ Module convertModule("object"(_type="FunctionType", argtypes=list[node] argtypes
 
 // statements
 
-Statement convertStat(node obj:"object"(_type=str typ), loc src) 
-    = convertStat(typ, obj, src)
-        [src=obj has lineno 
-            ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
-            : src];
+Statement convertStat(node obj:"object"(_type=str typ), loc src) {
+    try {
+        return  convertStat(typ, obj, src)
+            [src=obj has lineno 
+                ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
+                : src];
+    }
+    catch CallFailed(args): {
+        println("failed to convert statement:");
+        iprintln(obj);
+        throw CallFailed(args);
+    }
+}
 
 Statement convertStat("Expr", node obj, loc src)
     = expr(convertExp(obj, src));
@@ -126,15 +134,14 @@ Statement convertStat("FunctionDef",
     node obj:"object"(
         name=str name,
         args=node formals,
-        body=list[node] body,
-        decorators=list[node] decorators
+        body=list[node] body
     ),
     loc src)
     = functionDef(
         name, 
         convertArgs(formals, src), 
         [convertStat(s, src) | s <- body], 
-        [convertExp(e, src) | e <- decorators], 
+        obj.decorators? ? [convertExp(e, src) | e <- nodes(obj.decorators)] : [],
         obj.returns? ? just(convertExp(obj.returns, src)) : nothing(),
         obj.typeComment? ? just(obj.typeComment) : nothing()
     );
@@ -202,7 +209,7 @@ Statement convertStat("For",
         target=node target,
         iter=node iter,
         body=list[node] body,
-        or_else=list[node] or_else
+        orelse=list[node] orelse
     ),
     loc src
     )
@@ -210,7 +217,7 @@ Statement convertStat("For",
         convertExp(target, src),
         convertExp(iter, src),
         [convertStat(s, src) | s <- body],
-        [convertStat(s, src) | s <- or_else],
+        [convertStat(s, src) | s <- orelse],
         obj.type_comment? ? just(obj.type_comment) : nothing()
     );
 
@@ -219,7 +226,7 @@ Statement convertStat("AsyncFor",
         target=node target,
         iter=node iter,
         body=list[node] body,
-        or_else=list[node] or_else
+        orelse=list[node] orelse
     ),
     loc src
     )
@@ -227,7 +234,7 @@ Statement convertStat("AsyncFor",
         convertExp(target, src),
         convertExp(iter, src),
         [convertStat(s, src) | s <- body],
-        [convertStat(s, src) | s <- or_else],
+        [convertStat(s, src) | s <- orelse],
         obj.type_comment? ? just(obj.type_comment) : nothing()
     );
 
@@ -235,28 +242,28 @@ Statement convertStat("While",
     node obj:"object"(
         target=node \test,
         body=list[node] body,
-        or_else=list[node] or_else
+        orelse=list[node] orelse
     ),
     loc src
     )
     = \while(
         convertExp(\test, src),
         [convertStat(s, src) | s <- body],
-        [convertStat(s, src) | s <- or_else]
+        [convertStat(s, src) | s <- orelse]
     );
 
 Statement convertStat("If", 
     node obj:"object"(
-        target=node \test,
+        \test=node \test,
         body=list[node] body,
-        or_else=list[node] or_else
+        orelse=list[node] orelse
     ),
     loc src
     )
     = \if(
         convertExp(\test, src),
         [convertStat(s, src) | s <- body],
-        [convertStat(s, src) | s <- or_else]
+        [convertStat(s, src) | s <- orelse]
     );
 
 Statement convertStat("With", 
@@ -295,14 +302,14 @@ Statement convertStat("Try",
     "object"(
         body=list[node] body,
         handlers=list[node] handlers,
-        or_else=list[node] or_else,
+        orelse=list[node] orelse,
         final_body=list[node] final_body
     ),
     loc src)
     = \try(
         [convertStat(s, src) | s <- body],
         [convertHandler(h, src) | h <- handlers],
-        [convertStat(s, src) | s <- or_else],
+        [convertStat(s, src) | s <- orelse],
         [convertStat(s, src) | s <- final_body]
     );
 
@@ -437,6 +444,8 @@ Expression convertExp("Constant", "object"(\value=num v), loc src) = constant(nu
 
 Expression convertExp("Constant", "object"(\value=str s), loc src) = constant(string(s), nothing());
 
+default Expression convertExp("Constant", "object"(), loc src) = constant(none(), nothing());
+
 // assorted helper constructs
 WithItem convertItem(node obj:"object"(context_expr=node c), loc src)
     = withItem(convertExp(c, src), obj.optional_vars? ? just(convertExp(obj.optional_vars, src)) : nothing());
@@ -546,7 +555,7 @@ Arg convertArg(
     = arg(
         a, 
         obj.annotation? ? just(convertExp(obj.annotation, src)) : nothing(),
-        obj.type_comment ? just(obj.typeComment) : nothing() 
+        obj.type_comment? ? just(obj.type_comment) : nothing() 
     )[src=obj has lineno 
             ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
             : src]
