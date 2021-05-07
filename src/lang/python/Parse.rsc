@@ -343,7 +343,7 @@ Expression convertExp("Attribute", "object"(\value=node v, attr=str a, ctx=node 
 Expression convertExp("Subscript", "object"(\value=node v, slice=node slice, ctx=node ctx), loc src)
     = subscript(convertExp(v, src), convertExp(slice, src), convertCtx(ctx));
 
-Expression convertExp("Subscript", "object"(\value=node v, ctx=node ctx), loc src)
+Expression convertExp("Starred", "object"(\value=node v, ctx=node ctx), loc src)
     = starred(convertExp(v, src), convertCtx(ctx));
 
 Expression convertExp("Name", "object"(\id=str i, ctx=node ctx), loc src)
@@ -485,8 +485,8 @@ Conversion convertConv(115) = stringFormatting();
 Conversion convertConv(114) = reprFormatting();
 Conversion convertConv(97) = asciiFormatting();
 
-Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) 
-    = \keyword(i, convertExp(v, src));
+Keyword convertKeyword(node obj:"object"(\value=node v), loc src) 
+    = \keyword(obj.arg? ? just(obj.arg) : nothing(), convertExp(v, src));
 
 Comprehension convertGenerator(
     "object"(

@@ -174,7 +174,7 @@ data Arg(loc src = |unknown:///|)
   = arg(Identifier arg, Maybe[Expression] annotation, Maybe[str] typeComment);
 
 data Keyword(loc src = |unknown:///|) 
-  = \keyword(Identifier arg, Expression \value);
+  = \keyword(Maybe[Identifier] arg, Expression \value);
 
 data Alias 
   = \alias(Identifier name, Maybe[Identifier] asName);
