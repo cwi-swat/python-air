@@ -58,10 +58,11 @@ public Expression parsePythonExpression(str input, loc src)
 public Statement parsePythonStatement(str input, loc src) 
     = convertStat(importAST(input), src);
 
-@synopsis="parses a python statement producing an AST of type Expression"
+@synopsis="parses a python module producing an AST of type Module"
 public Module parsePythonModule(str input, loc src) 
     = convertModule(importAST(input), src);
 
+@synopsis="parses a python module producing an AST of type Module"
 public Module parsePythonModule(loc src) 
     = convertModule(importAST(readFile(src)), src);
 
@@ -92,6 +93,8 @@ node importAST(str input) {
     return parseJSON(#node, output);
 }
 
+// modules
+
 Module convertModule("object"(_type="Module", body=list[node] body, type_ignores=list[node] type_ignores), loc src) 
     = \module([convertStat(s, src) | s <- body], [convertTypeIgnore(i) | i <- type_ignores]);
 
@@ -103,6 +106,8 @@ Module convertModule("object"(_type="Interactive", body=list[node] body), loc sr
 
 Module convertModule("object"(_type="FunctionType", argtypes=list[node] argtypes, expr=node returns), loc src) 
     = \functionType([convertExp(e, src) | e <- argtypes], convertExp(returns, src));
+
+// statements
 
 Statement convertStat(node obj:"object"(_type=str typ), loc src) 
     = convertStat(typ, obj, src)
@@ -321,6 +326,7 @@ Statement convertStat("Pass", _, loc src) = pass();
 Statement convertStat("Break", _, loc src) = \break();
 Statement convertStat("Continue", _, loc src) = \continue();
 
+// expressions
 Expression convertExp(node obj:"object"(_type=str typ), loc src) 
     = convertExp(typ, obj, src)
         [src=obj has lineno 
@@ -426,6 +432,7 @@ Expression convertExp("Constant", "object"(\value=num v), loc src) = constant(nu
 
 Expression convertExp("Constant", "object"(\value=str s), loc src) = constant(string(s), nothing());
 
+// assorted helper constructs
 WithItem convertItem(node obj:"object"(context_expr=node c), loc src)
     = withItem(convertExp(c, src), obj.optional_vars? ? just(convertExp(obj.optional_vars, src)) : nothing());
 
@@ -538,6 +545,8 @@ Arg convertArg(
 
 TypeIgnore convertTypeIgnore("object"(_type="TypeIgnore", lineno=int l, \tag=str t))
     = typeIgnore(l, t);
+
+// utilities
 
 private str pythonParserCode()
     = "import io
