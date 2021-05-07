@@ -139,7 +139,15 @@ data ExceptHandler(loc src = |unknown:///|)
   = exceptHandler(Maybe[Expression] \type, Maybe[Identifier] optName, list[Statement] body);
 
 data Arguments 
-  = arguments(list[Arg] posonlyargs, list[Arg] args, Maybe[Arg] varargs, list[Arg] kwonlyargs, list[Expression] kw_defaults, Maybe[Arg] kwarg, list[Expression] defaults);
+  = arguments(
+      list[Arg] posonlyargs, 
+      list[Arg] args, 
+      Maybe[Arg] varargs, 
+      list[Arg] kwonlyargs, 
+      list[Expression] kw_defaults, 
+      Maybe[Arg] kwarg, 
+      list[Expression] defaults
+  );
 
 data Arg(loc src = |unknown:///|) 
   = arg(Identifier arg, Maybe[Expression] annotations, Maybe[str] typeComment);

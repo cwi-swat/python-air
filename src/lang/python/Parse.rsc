@@ -77,6 +77,9 @@ Expression convertExp(node obj:"object"(_type=str typ), loc src)
 
 Expression convertExp("Expression", node obj, loc src) = convertExp(obj.body, src);
 
+Expression convertExp("Lambda", "object"(args=node args, body=node body), loc src) 
+    = lambda(convertArgs(args, src), convertExp(body, src));
+
 Expression convertExp("BinOp", "object"(op=node op, \left=node lhs, \right=node rhs), loc src) 
     = convertOp(op._type, convertExp(lhs, src), convertExp(rhs, src));
 
@@ -133,6 +136,31 @@ Expression convertOp("UAdd", Expression a) = uadd(a);
 Expression convertOp("USub", Expression a) = usub(a);
 
 ExprContext convertCtx("object"(_type="Load")) = load();
+
+Arguments convertArgs(
+    node obj:"object"(
+        _type="arguments", 
+        posonlyargs=list[node] posonlyargs,
+        kwonlyargs=list[node] kwonlyargs,
+        args=list[node] args
+    ),
+    loc src)
+    = arguments(
+        [convertArg(a, src) | a <- posonlyargs], 
+        [convertArg(a, src) | a <- args], 
+        obj.vararg? ? just(convertArg(obj.vararg, src)) : nothing(), 
+        [convertArg(a, src) | a <- kwonlyargs], 
+        obj.kw_defaults? ? [convertExp(e, src) | e <- cast(#list[node], obj.kw_defaults)] : [],
+        obj.kwarg? ? just(convertArg(obj.kwarg, src)) : nothing(),
+        obj.defaults? ? [convertExp(e, src) | e <- cast(#list[node], obj.defaults)] : []
+    );
+
+Arg convertArg(
+    "object"(
+        arg=str a
+    ),
+    loc src)
+    = arg(id(a), nothing() /* annotations */, nothing() /*Maybe[str] typeComment*/, src=src);
 
 private str pythonParserCode()
     = "import io
