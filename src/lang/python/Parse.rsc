@@ -95,6 +95,193 @@ Statement convertStat("FunctionDef",
         obj.typeComment? ? just(obj.typeComment) : nothing()
     );
 
+Statement convertStat("AsyncFunctionDef",
+    node obj:"object"(
+        name=str name,
+        args=node formals,
+        body=list[node] body,
+        decorators=list[node] decorators
+    ),
+    loc src)
+    = asyncFunctionDef(
+        id(name), 
+        convertArgs(formals, src), 
+        [convertStat(s, src) | s <- body], 
+        [convertExp(e, src) | e <- decorators], 
+        obj.returns? ? just(convertExp(obj.returns, src)) : nothing(),
+        obj.typeComment? ? just(obj.typeComment) : nothing()
+    );
+
+Statement convertStat("ClassDef",
+    node obj:"object"(
+        name=str name,
+        based=list[node] bases,
+        keywords=list[node] keywords,
+        body=list[node] body,
+        decorators=list[node] decorators
+    ),
+    loc src)
+    = classDef(
+        id(name),
+        [convertExp(b, src) | b <- bases],
+        [convertKeyword(k, src) | k <- keywords],
+        [convertStat(s, src) | s <- body],
+        [convertExp(d, src) | d <- decorators]
+    );
+
+Statement convertStat("Return", node obj, loc src) 
+    = \return(obj.\value? ? just(convertExp(obj.\value, src)) : nothing());
+
+Statement convertStat("Delete", "object"(target=list[node] targets), loc src)
+    = delete([convertExp(t, src) | t <- targets]);
+
+Statement convertStat("Assign", node obj:"object"(target=list[node] targets, \value=node \val), loc src)
+    = assign(
+        [convertExp(t, src) | t <- targets],
+        convertExp(val, src),
+        obj.type_comment? ? just(obj.type_comment) : nothing()
+    );
+
+Statement convertStat("AnnAssign", node obj:"object"(target=node target, annotation=node annotation), loc src)
+    = annAssign(
+        convertExp(target, src), 
+        convertExp(annotation, src),
+        obj.\value? ? just(convertExp(obj.\value, src)) : nothing(),
+        obj.simple == 1
+    );
+
+Statement convertStat("AugAssign", "object"(op=node op, target=node target, \value=node v), loc src)
+    = convertAssign(op._type, convertExp(target, src), convertExp(v, src));
+
+
+Statement convertStat("For", 
+    node obj:"object"(
+        target=node target,
+        iter=node iter,
+        body=list[node] body,
+        or_else=list[node] or_else
+    ),
+    loc src
+    )
+    = \for(
+        convertExp(target, src),
+        convertExp(iter, src),
+        [convertStat(s, src) | s <- body],
+        [convertStat(s, src) | s <- or_else],
+        obj.type_comment? ? just(obj.type_comment) : nothing()
+    );
+
+Statement convertStat("AsyncFor", 
+    node obj:"object"(
+        target=node target,
+        iter=node iter,
+        body=list[node] body,
+        or_else=list[node] or_else
+    ),
+    loc src
+    )
+    = \asyncFor(
+        convertExp(target, src),
+        convertExp(iter, src),
+        [convertStat(s, src) | s <- body],
+        [convertStat(s, src) | s <- or_else],
+        obj.type_comment? ? just(obj.type_comment) : nothing()
+    );
+
+Statement convertStat("While", 
+    node obj:"object"(
+        target=node \test,
+        body=list[node] body,
+        or_else=list[node] or_else
+    ),
+    loc src
+    )
+    = \while(
+        convertExp(\test, src),
+        [convertStat(s, src) | s <- body],
+        [convertStat(s, src) | s <- or_else]
+    );
+
+Statement convertStat("If", 
+    node obj:"object"(
+        target=node \test,
+        body=list[node] body,
+        or_else=list[node] or_else
+    ),
+    loc src
+    )
+    = \if(
+        convertExp(\test, src),
+        [convertStat(s, src) | s <- body],
+        [convertStat(s, src) | s <- or_else]
+    );
+
+Statement convertStat("With", 
+    node obj:"object"(
+        items=list[node] items,
+        body=list[node] body
+    ),
+    loc src
+    )
+    = \with(
+        [convertItem(i, src) |  i <- items],
+        [convertStat(s, src) | s <- body],
+        obj.type_comment? ? just(obj.type_comment) : nothing()
+    );
+
+Statement convertStat("AsyncWith", 
+    node obj:"object"(
+        items=list[node] items,
+        body=list[node] body
+    ),
+    loc src
+    )
+    = \asyncWith(
+        [convertItem(i, src) |  i <- items],
+        [convertStat(s, src) | s <- body],
+        obj.type_comment? ? just(obj.type_comment) : nothing()
+    );    
+
+Statement convertStat("Raise", node obj, loc src)
+    = raise(
+        obj.exc? ? just(convertExp(obj.exc, src)) : nothing(),
+        obj.cause? ? just(convertExp(obj.cause, src)) : nothing()
+    ); 
+
+Statement convertStat("Try", 
+    "object"(
+        body=list[node] body,
+        handlers=list[node] handlers,
+        or_else=list[node] or_else,
+        final_body=list[node] final_body
+    ),
+    loc src)
+    = \try(
+        [convertStat(s, src) | s <- body],
+        [convertHandler(h, src) | h <- handlers],
+        [convertStat(s, src) | s <- or_else],
+        [convertStat(s, src) | s <- final_body]
+    );
+
+Statement convertStat("Assert", node obj:"object"(\test=node t), loc src)
+    = \assert(convertExp(t, src), obj.msg? ? just(convertExp(obj.msg, src)) : nothing());
+
+Statement convertStat("Import", "object"(aliases=list[node] aliases), loc src)
+    = \import([convertAlias(a) | a <- aliases]);
+
+Statement convertStat("ImportFrom", node obj:"object"(aliases=list[node] aliases), loc src)
+    = \import(obj.\module? ? just(id(obj.\module)) : nothing(), [convertAlias(a, src) | a <- aliases]);
+
+Statement convertStat("Global", "object"(names=list[str] names), loc src) 
+    = global([id(i) | i <- names]);
+
+Statement convertStat("NonLocal", "object"(names=list[str] names), loc src) 
+    = nonlocal([id(i) | i <- names]);
+
+Statement convertStat("Pass", _, loc src) = pass();
+Statement convertStat("Break", _, loc src) = \break();
+Statement convertStat("Continue", _, loc src) = \continue();
+
 Expression convertExp(node obj:"object"(_type=str typ), loc src) 
     = convertExp(typ, obj, src)
         [src=obj has lineno 
@@ -200,6 +387,25 @@ Expression convertExp("Constant", "object"(\value=num v), loc src) = constant(nu
 
 Expression convertExp("Constant", "object"(\value=str s), loc src) = constant(string(s), nothing());
 
+WithItem convertItem(node obj:"object"(context_expr=node c), loc src)
+    = withItem(convertExp(c, src), obj.optional_vars? ? just(convertExp(obj.optional_vars, src)) : nothing());
+
+Alias convertAlias(node obj:"object"(name=str name))
+    = \alias(id(name), obj.asname? ? just(id(obj.asname)) : nothing());
+
+ExceptHandler convertHandler(
+    node obj:"object"(
+        body=list[node] body
+    ),
+    loc src)
+    = exceptHandler(
+        obj.\type? ? just(convertExp(obj.\type, src)) : nothing(),
+        obj.name? ? just(id(obj.name)) : nothing(),
+        [convertStat(s, src) | s <- body]
+    )[src=obj has lineno 
+            ? src(0,1,<\int(obj.lineno), \int(obj.col_offset)>,<\int(obj.end_lineno), \int(obj.end_col_offset)>) 
+            : src];
+
 CmpOp convertCompOp("Eq") = eq();
 CmpOp convertCompOp("NotEq") = noteq();
 CmpOp convertCompOp("Lt") = lt();
@@ -210,6 +416,19 @@ CmpOp convertCompOp("Is") = is();
 CmpOp convertCompOp("IsNot") = isnot();
 CmpOp convertCompOp("In") = \in();
 CmpOp convertCompOp("NotIn") = \notin();
+
+Statement convertAssign("Sub", Expression target, Expression \value) = subAssign(target, \value);
+Statement convertAssign("Mult", Expression target, Expression \value) = multAssign(target, \value);
+Statement convertAssign("Matmult", Expression target, Expression \value) = matmultAssign(target, \value);
+Statement convertAssign("Div", Expression target, Expression \value) = divAssign(target, \value);
+Statement convertAssign("Mod", Expression target, Expression \value) = modAssign(target, \value);
+Statement convertAssign("Pow", Expression target, Expression \value) = powAssign(target, \value);
+Statement convertAssign("LShift", Expression target, Expression \value) = lshiftAssign(target, \value);
+Statement convertAssign("RShift", Expression target, Expression \value) = rshiftAssign(target, \value);
+Statement convertAssign("BitOr", Expression target, Expression \value) = bitorAssign(target, \value);
+Statement convertAssign("BitXor", Expression target, Expression \value) = bitxorAssign(target, \value);
+Statement convertAssign("BitAnd", Expression target, Expression \value) = bitandAssign(target, \value);
+Statement convertAssign("FloorDiv", Expression target, Expression \value) = floordivAssign(target, \value);
 
 Conversion convertConv(int i) = noFormatting() when i == -1;
 Conversion convertConv(115) = stringFormatting();
