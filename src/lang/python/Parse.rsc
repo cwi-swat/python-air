@@ -142,15 +142,14 @@ Statement convertStat("AsyncFunctionDef",
     node obj:"object"(
         name=str name,
         args=node formals,
-        body=list[node] body,
-        decorators=list[node] decorators
+        body=list[node] body
     ),
     loc src)
     = asyncFunctionDef(
         name, 
         convertArgs(formals, src), 
         [convertStat(s, src) | s <- body], 
-        [convertExp(e, src) | e <- decorators], 
+        obj.decorators? ? [convertExp(e, src) | e <- nodes(obj.decorators)] : [],
         obj.returns? ? just(convertExp(obj.returns, src)) : nothing(),
         obj.typeComment? ? just(obj.typeComment) : nothing()
     );
@@ -174,7 +173,7 @@ Statement convertStat("ClassDef",
 Statement convertStat("Return", node obj, loc src) 
     = \return(obj.\value? ? just(convertExp(obj.\value, src)) : nothing());
 
-Statement convertStat("Delete", "object"(target=list[node] targets), loc src)
+Statement convertStat("Delete", "object"(targets=list[node] targets), loc src)
     = delete([convertExp(t, src) | t <- targets]);
 
 Statement convertStat("Assign", node obj:"object"(targets=list[node] targets, \value=node \val), loc src)
@@ -231,7 +230,7 @@ Statement convertStat("AsyncFor",
 
 Statement convertStat("While", 
     node obj:"object"(
-        target=node \test,
+        \test=node \test,
         body=list[node] body,
         orelse=list[node] orelse
     ),
@@ -421,7 +420,7 @@ Expression convertExp("GeneratorExp", "object"(elt=node e, generators=list[node]
 Expression convertExp("DictComp", "object"(key=node k, \value=node v, generators=list[node] gens), loc src)
     = dictComp(convertExp(k, src), convertExp(v, src), [convertGenerator(g, src) | g <- gens]);
 
-Expression convertExp("Await", "object"(expr=node e), loc src) 
+Expression convertExp("Await", "object"(\value=node e), loc src) 
     = await(convertExp(e, src));
 
 Expression convertExp("Yield", node obj, loc src) 
@@ -467,6 +466,7 @@ CmpOp convertCompOp("IsNot") = isnot();
 CmpOp convertCompOp("In") = \in();
 CmpOp convertCompOp("NotIn") = \notin();
 
+Statement convertAssign("Add", Expression target, Expression \value) = addAssign(target, \value);
 Statement convertAssign("Sub", Expression target, Expression \value) = subAssign(target, \value);
 Statement convertAssign("Mult", Expression target, Expression \value) = multAssign(target, \value);
 Statement convertAssign("Matmult", Expression target, Expression \value) = matmultAssign(target, \value);
