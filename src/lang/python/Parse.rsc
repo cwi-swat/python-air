@@ -44,12 +44,11 @@ public void installRequirements() {
 @synopsis="Retrieves the search path for Python files using the sys.path constant"
 public list[loc] pythonPath() {
     lst=exec("python3", args=["-c", "import sys;print(sys.path)"]);
-    println("lst: <lst>");
     lst=visit (lst) {
         case /\'/ => "\""
     }
-    println("lst2: <lst>");
-    return [ |file:///| + e | e <- readTextValueString(#list[str], lst)];
+    return [resolveLocation(|cwd:///|)] 
+        + [ f | e <- readTextValueString(#list[str], lst), e != "", loc f := |file:///| + e, exists(f)];
 }
 
 @doc{this global caches the offsets for every line number during the processing of a single Python input string}
@@ -602,10 +601,10 @@ private list[node] nodes(value v) = typeCast(#list[node], v);
 
 void main(loc input = |unknown:///|) {
     if (exists(input)) {
-        println(parsePythonModule(input));
+        iprintln(parsePythonModule(input));
     }
     else {
-         tempDir = |file:///| + getSystemProperty("java.io.tmpdir");
+        tempDir = |file:///| + getSystemProperty("java.io.tmpdir");
 
         pythonInputFile = tempDir + "parsePython.py";
         iprintln(parsePythonModule(pythonInputFile));
