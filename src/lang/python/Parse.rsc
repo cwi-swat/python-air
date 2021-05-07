@@ -113,19 +113,11 @@ Module convertModule("object"(_type="FunctionType", argtypes=list[node] argtypes
 
 // statements
 
-Statement convertStat(node obj:"object"(_type=str typ), loc src) {
-    try {
-        return  convertStat(typ, obj, src)
-            [src=obj has lineno 
-                ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
-                : src];
-    }
-    catch CallFailed(args): {
-        println("failed to convert statement:");
-        iprintln(obj);
-        throw CallFailed(args);
-    }
-}
+Statement convertStat(node obj:"object"(_type=str typ), loc src) 
+    =  convertStat(typ, obj, src)
+        [src=obj has lineno 
+            ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
+            : src];
 
 Statement convertStat("Expr", node obj, loc src)
     = expr(convertExp(obj, src));
@@ -166,10 +158,9 @@ Statement convertStat("AsyncFunctionDef",
 Statement convertStat("ClassDef",
     node obj:"object"(
         name=str name,
-        based=list[node] bases,
+        bases=list[node] bases,
         keywords=list[node] keywords,
-        body=list[node] body,
-        decorators=list[node] decorators
+        body=list[node] body
     ),
     loc src)
     = classDef(
@@ -177,7 +168,7 @@ Statement convertStat("ClassDef",
         [convertExp(b, src) | b <- bases],
         [convertKeyword(k, src) | k <- keywords],
         [convertStat(s, src) | s <- body],
-        [convertExp(d, src) | d <- decorators]
+        obj.decorators? ? [convertExp(d, src) | d <- nodes(obj.decorators)] : []
     );
 
 Statement convertStat("Return", node obj, loc src) 
@@ -299,18 +290,17 @@ Statement convertStat("Raise", node obj, loc src)
     ); 
 
 Statement convertStat("Try", 
-    "object"(
+    node obj:"object"(
         body=list[node] body,
         handlers=list[node] handlers,
-        orelse=list[node] orelse,
-        final_body=list[node] final_body
+        orelse=list[node] orelse
     ),
     loc src)
     = \try(
         [convertStat(s, src) | s <- body],
         [convertHandler(h, src) | h <- handlers],
         [convertStat(s, src) | s <- orelse],
-        [convertStat(s, src) | s <- final_body]
+        obj.final_body? ? [convertStat(s, src) | s <- nodes(obj.final_body)] : []
     );
 
 Statement convertStat("Assert", node obj:"object"(\test=node t), loc src)
@@ -498,7 +488,13 @@ Conversion convertConv(97) = asciiFormatting();
 Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) 
     = \keyword(i, convertExp(v, src));
 
-Comprehension convertGenerator("object"(target=node target, iter=node iter, ifs=list[node] ifs, isAsync=int isAsync), loc src) 
+Comprehension convertGenerator(
+    "object"(
+        target=node target, 
+        iter=node iter, 
+        ifs=list[node] ifs, 
+        is_async=int isAsync)
+    , loc src) 
     = comprehension(
         convertExp(target, src),
         convertExp(iter, src),
