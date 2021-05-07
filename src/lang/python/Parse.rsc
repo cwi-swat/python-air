@@ -33,13 +33,15 @@ import lang::json::IO;
 import IO;
 import Type;
 import ValueIO;
+import String;
+import List;
 
 @synopsis="Installs the ast2json Python library using pip3"
 public void installRequirements() {
     println(exec("pip3", args=["install", "ast2json"]));
 }
 
-@synopsis="Retrieves the search path for python files using the sys.path constant"
+@synopsis="Retrieves the search path for Python files using the sys.path constant"
 public list[loc] pythonPath() {
     lst=exec("python3", args=["-c", "import sys;print(sys.path)"]);
     println("lst: <lst>");
@@ -49,6 +51,9 @@ public list[loc] pythonPath() {
     println("lst2: <lst>");
     return [ |file:///| + e | e <- readTextValueString(#list[str], lst)];
 }
+
+@doc{this global caches the offsets for every line number during the processing of a single Python input string}
+private map[int line, int offset] OFFSETS = ();
 
 @synopsis="parses a python expression producing an AST of type Expression"
 public Expression parsePythonExpression(str input, loc src) 
@@ -63,8 +68,9 @@ public Module parsePythonModule(str input, loc src)
     = convertModule(importAST(input), src);
 
 @synopsis="parses a python module producing an AST of type Module"
-public Module parsePythonModule(loc src) 
-    = convertModule(importAST(readFile(src)), src);
+public Module parsePythonModule(loc src) {
+    return convertModule(importAST(readFile(src)), src);
+}
 
 @synopsis="wraps the python ast library as an external system process"
 @description{
@@ -78,6 +84,7 @@ public Module parsePythonModule(loc src)
     intermediate stage.
 }
 node importAST(str input) {
+    OFFSETS = offsets(input);
     tempDir = |file:///| + getSystemProperty("java.io.tmpdir");
 
     pythonParserFile = tempDir + "parsePython.py";
@@ -112,7 +119,7 @@ Module convertModule("object"(_type="FunctionType", argtypes=list[node] argtypes
 Statement convertStat(node obj:"object"(_type=str typ), loc src) 
     = convertStat(typ, obj, src)
         [src=obj has lineno 
-            ? src(0,1,<\int(obj.lineno), \int(obj.col_offset)>,<\int(obj.end_lineno), \int(obj.end_col_offset)>) 
+            ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
             : src];
 
 Statement convertStat("Expression", node obj, loc src)
@@ -192,7 +199,6 @@ Statement convertStat("AnnAssign", node obj:"object"(target=node target, annotat
 
 Statement convertStat("AugAssign", "object"(op=node op, target=node target, \value=node v), loc src)
     = convertAssign(op._type, convertExp(target, src), convertExp(v, src));
-
 
 Statement convertStat("For", 
     node obj:"object"(
@@ -330,7 +336,7 @@ Statement convertStat("Continue", _, loc src) = \continue();
 Expression convertExp(node obj:"object"(_type=str typ), loc src) 
     = convertExp(typ, obj, src)
         [src=obj has lineno 
-            ? src(0,1,<\int(obj.lineno), \int(obj.col_offset)>,<\int(obj.end_lineno), \int(obj.end_col_offset)>) 
+            ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset)
             : src];
 
 Expression convertExp("Expression", node obj, loc src) = convertExp(obj.body, src);
@@ -449,7 +455,7 @@ ExceptHandler convertHandler(
         obj.name? ? just(id(obj.name)) : nothing(),
         [convertStat(s, src) | s <- body]
     )[src=obj has lineno 
-            ? src(0,1,<\int(obj.lineno), \int(obj.col_offset)>,<\int(obj.end_lineno), \int(obj.end_col_offset)>) 
+            ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset)
             : src];
 
 CmpOp convertCompOp("Eq") = eq();
@@ -481,7 +487,8 @@ Conversion convertConv(115) = stringFormatting();
 Conversion convertConv(114) = reprFormatting();
 Conversion convertConv(97) = asciiFormatting();
 
-Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) = \keyword(id(i), convertExp(v, src));
+Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) 
+    = \keyword(id(i), convertExp(v, src));
 
 Comprehension convertGenerator("object"(target=node target, iter=node iter, ifs=list[node] ifs, isAsync=int isAsync), loc src) 
     = comprehension(
@@ -540,13 +547,37 @@ Arg convertArg(
         obj.annotation? ? just(convertExp(obj.annotation, src)) : nothing(),
         obj.type_comment ? just(obj.typeComment) : nothing() 
     )[src=obj has lineno 
-            ? src(0,1,<\int(obj.lineno), \int(obj.col_offset)>,<\int(obj.end_lineno), \int(obj.end_col_offset)>) 
-            : src];
+            ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
+            : src]
+    ;
+
+
 
 TypeIgnore convertTypeIgnore("object"(_type="TypeIgnore", lineno=int l, \tag=str t))
     = typeIgnore(l, t);
 
 // utilities
+
+int offset(int line, int column) {
+    return OFFSETS[line] + column;
+}
+
+map[int line, int offset] offsets(str input) {
+    int offset = 0;
+    lines = split("\n", input);
+    result = for (int i <- index(lines)) {
+        append <i + 1, offset>;
+        offset += size(lines[i]);
+    }
+
+    return (ind : off | <ind, off> <- result);
+}
+
+private loc \loc(loc path, int startLine, int startCol, int endLine, int endCol) {
+    st = offset(startLine, startCol);
+    end = offset(endLine, endCol);
+    return path(st, end - st, <startLine, startCol>, <endLine, endCol>);
+}
 
 private str pythonParserCode()
     = "import io
