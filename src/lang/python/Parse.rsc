@@ -5,6 +5,7 @@ import util::ShellExec;
 import util::SystemAPI;
 import lang::json::IO;
 import IO;
+import Type;
 
 @synopsis="Installs the ast2json Python library using pip3"
 public void installRequirements() {
@@ -56,9 +57,17 @@ node importAST(str input) {
     return parseJSON(#node, output);
 }
 
-Module convertModule(node obj, loc src) {
-    throw "not yet";
-}
+Module convertModule("object"(_type="Module", body=list[node] body, type_ignores=list[node] type_ignores), loc src) 
+    = \module([convertStat(s, src) | s <- body], [convertTypeIgnore(i, src) | i <- type_ignores]);
+
+Module convertModule("object"(_type="Expression", expr=node body), loc src) 
+    = \expression(convertExp(body, src));    
+
+Module convertModule("object"(_type="Interactive", body=list[node] body), loc src) 
+    = \interactive([convertStat(s, src) | s <- body]);    
+
+Module convertModule("object"(_type="FunctionType", argtypes=list[node] argtypes, expr=node returns), loc src) 
+    = \functionType([convertExp(e, src) | e <- argtypes], convertExp(returns, src));
 
 Statement convertStat(node obj:"object"(_type=str typ), loc src) 
     = convertStat(typ, obj, src)
@@ -68,6 +77,23 @@ Statement convertStat(node obj:"object"(_type=str typ), loc src)
 
 Statement convertStat("Expression", node obj, loc src)
     = expr(convertExp(obj, src));
+
+Statement convertStat("FunctionDef",
+    node obj:"object"(
+        name=str name,
+        args=node formals,
+        body=list[node] body,
+        decorators=list[node] decorators
+    ),
+    loc src)
+    = functionDef(
+        id(name), 
+        convertArgs(formals, src), 
+        [convertStat(s, src) | s <- body], 
+        [convertExp(e, src) | e <- decorators], 
+        obj.returns? ? just(convertExp(obj.returns, src)) : nothing(),
+        obj.typeComment? ? just(obj.typeComment) : nothing()
+    );
 
 Expression convertExp(node obj:"object"(_type=str typ), loc src) 
     = convertExp(typ, obj, src)
@@ -150,17 +176,26 @@ Arguments convertArgs(
         [convertArg(a, src) | a <- args], 
         obj.vararg? ? just(convertArg(obj.vararg, src)) : nothing(), 
         [convertArg(a, src) | a <- kwonlyargs], 
-        obj.kw_defaults? ? [convertExp(e, src) | e <- cast(#list[node], obj.kw_defaults)] : [],
+        obj.kw_defaults? ? [convertExp(e, src) | e <- nodes(obj.kw_defaults)] : [],
         obj.kwarg? ? just(convertArg(obj.kwarg, src)) : nothing(),
-        obj.defaults? ? [convertExp(e, src) | e <- cast(#list[node], obj.defaults)] : []
+        obj.defaults? ? [convertExp(e, src) | e <- nodes(obj.defaults)] : []
     );
 
 Arg convertArg(
-    "object"(
+    node obj:"object"(
         arg=str a
     ),
     loc src)
-    = arg(id(a), nothing() /* annotations */, nothing() /*Maybe[str] typeComment*/, src=src);
+    = arg(
+        id(a), 
+        obj.annotation? ? just(convertExp(obj.annotation, src)) : nothing(),
+        obj.type_comment ? just(obj.typeComment) : nothing() 
+    )[src=obj has lineno 
+            ? src(0,1,<\int(obj.lineno), \int(obj.col_offset)>,<\int(obj.end_lineno), \int(obj.end_col_offset)>) 
+            : src];
+
+TypeIgnore convertTypeIgnore("object"(_type="TypeIgnore", lineno=int l, \tag=str t), loc _ /*src*/)
+    = typeIgnore(l, t);
 
 private str pythonParserCode()
     = "import io
@@ -180,13 +215,5 @@ private str pythonParserCode()
       'print(theJsonAstAsString)
       ";
 
-private int \int(value v) = cast(#int, v);
-
-private &T cast(type[&T] t, value v) {
-    if (&T r := v) {
-        return r;
-    }
-    else {
-        throw "could not parse <v> as <t>";
-    }
-}
+private int \int(value v) = typeCast(#int, v);
+private list[node] nodes(value v) = typeCast(#list[nodes], v);

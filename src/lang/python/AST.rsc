@@ -150,7 +150,7 @@ data Arguments
   );
 
 data Arg(loc src = |unknown:///|) 
-  = arg(Identifier arg, Maybe[Expression] annotations, Maybe[str] typeComment);
+  = arg(Identifier arg, Maybe[Expression] annotation, Maybe[str] typeComment);
 
 data Keyword(loc src = |unknown:///|) 
   = \keyword(Identifier arg, Expression \value);
