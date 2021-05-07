@@ -109,6 +109,9 @@ Expression convertExp("Lambda", "object"(args=node args, body=node body), loc sr
 Expression convertExp("BinOp", "object"(op=node op, \left=node lhs, \right=node rhs), loc src) 
     = convertOp(op._type, convertExp(lhs, src), convertExp(rhs, src));
 
+Expression convertExp("Compare", "object"(left=node first, ops=list[node] ops, comparators=list[node] comps), loc src)
+    = compare(convertExp(first, src), [convertCompOp(op) | "object"(_type=str op) <- ops], [convertExp(c, src) | c <- comps]);
+
 Expression convertExp("UnaryOp", "object"(op=node op, operand=node arg), loc src) 
     = convertOp(op._type, convertExp(arg, src));    
 
@@ -164,6 +167,17 @@ Expression convertExp("Constant", "object"(\value=num v), loc src) = constant(nu
 
 Expression convertExp("Constant", "object"(\value=str s), loc src) = constant(string(s), nothing());
 
+CmpOp convertCompOp("Eq") = eq();
+CmpOp convertCompOp("NotEq") = noteq();
+CmpOp convertCompOp("Lt") = lt();
+CmpOp convertCompOp("LtE") = lte();
+CmpOp convertCompOp("Gt") = gt();
+CmpOp convertCompOp("GtE") = gte();
+CmpOp convertCompOp("Is") = is();
+CmpOp convertCompOp("IsNot") = isnot();
+CmpOp convertCompOp("In") = \in();
+CmpOp convertCompOp("NotIn") = \notin();
+
 Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) = \keyword(id(i), convertExp(v, src));
 
 Comprehension convertGenerator("object"(target=node target, iter=node iter, ifs=list[node] ifs, isAsync=int isAsync), loc src) 
@@ -173,8 +187,6 @@ Comprehension convertGenerator("object"(target=node target, iter=node iter, ifs=
         [convertExp(i, src) | i <- ifs],
         isAsync == 1
     );
-
-    // Expression target, Expression iter, list[Expression] ifs, int isAsync
 
 Expression convertOp("Add", Expression l, Expression r) = add(l, r);
 Expression convertOp("Sub", Expression l, Expression r) = sub(l, r);
@@ -250,4 +262,4 @@ private str pythonParserCode()
       ";
 
 private int \int(value v) = typeCast(#int, v);
-private list[node] nodes(value v) = typeCast(#list[nodes], v);
+private list[node] nodes(value v) = typeCast(#list[node], v);
