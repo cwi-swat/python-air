@@ -610,11 +610,13 @@ void main() {
     count = 0;
 
     millis = cpuTime(() {
-        ignores = {"test_client.py", "buffer.py", "key_bindings.py"};
+        ignores = {"test_client.py", "buffer.py", "key_bindings.py", "process.py", "ElementTree.py", "saxutils.py",
+        "ast.py", "_header_value_parser.py", "headerregistry.py"};
 
         for (loc path <- pythonPath(), fs := crawl(path), /loc src := fs, src.file notin ignores, src.extension == "py") { 
             count += 1;
             println("<count> : <src>"); 
+            p = parsePythonModule(src);
         }
     });
 
