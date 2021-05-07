@@ -180,7 +180,7 @@ Statement convertStat("Return", node obj, loc src)
 Statement convertStat("Delete", "object"(target=list[node] targets), loc src)
     = delete([convertExp(t, src) | t <- targets]);
 
-Statement convertStat("Assign", node obj:"object"(target=list[node] targets, \value=node \val), loc src)
+Statement convertStat("Assign", node obj:"object"(targets=list[node] targets, \value=node \val), loc src)
     = assign(
         [convertExp(t, src) | t <- targets],
         convertExp(val, src),
@@ -313,7 +313,7 @@ Statement convertStat("Assert", node obj:"object"(\test=node t), loc src)
 Statement convertStat("Import", "object"(names=list[node] aliases), loc src)
     = \import([convertAlias(a) | a <- aliases]);
 
-Statement convertStat("ImportFrom", node obj:"object"(aliases=list[node] aliases), loc src)
+Statement convertStat("ImportFrom", node obj:"object"(names=list[node] aliases), loc src)
     = \importFrom(
         obj.\module? ? just(obj.\module) : nothing(), 
         [convertAlias(a) | a <- aliases],
@@ -518,6 +518,8 @@ Expression convertOp("UAdd", Expression a) = uadd(a);
 Expression convertOp("USub", Expression a) = usub(a);
 
 ExprContext convertCtx("object"(_type="Load")) = load();
+ExprContext convertCtx("object"(_type="Store")) = store();
+ExprContext convertCtx("object"(_type="Del")) = del();
 
 Arguments convertArgs(
     node obj:"object"(
@@ -597,3 +599,15 @@ private str pythonParserCode()
 
 private int \int(value v) = typeCast(#int, v);
 private list[node] nodes(value v) = typeCast(#list[node], v);
+
+void main(loc input = |unknown:///|) {
+    if (exists(input)) {
+        println(parsePythonModule(input));
+    }
+    else {
+         tempDir = |file:///| + getSystemProperty("java.io.tmpdir");
+
+        pythonInputFile = tempDir + "parsePython.py";
+        iprintln(parsePythonModule(pythonInputFile));
+    }
+}
