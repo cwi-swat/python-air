@@ -136,11 +136,45 @@ Expression convertExp("BoolOp", "object"(op="object"(_type="And"), values=list[n
 Expression convertExp("BoolOp", "object"(op="object"(_type="Or"), values=list[node] vs), loc src)
     = and([convertExp(v, src) | v <- vs]);    
 
+Expression convertExp("IfExp", "object"(\test=node t, body=node b, orelse=node orelse), loc src)
+    = ifExp(convertExp(t, src), convertExp(b, src), convertExp(orelse, src));
+
+Expression convertExp("ListComp", "object"(elt=node e, generators=list[node] gens), loc src)
+    = listComp(convertExp(e, src), [convertGenerator(g, src) | g <- gens]);
+
+Expression convertExp("SetComp", "object"(elt=node e, generators=list[node] gens), loc src)
+    = listComp(convertExp(e, src), [convertGenerator(g, src) | g <- gens]);
+
+Expression convertExp("GeneratorExp", "object"(elt=node e, generators=list[node] gens), loc src)
+    = generatorExp(convertExp(e, src), [convertGenerator(g, src) | g <- gens]);
+
+Expression convertExp("DictComp", "object"(key=node k, \value=v, generators=list[node] gens), loc src)
+    = dictComp(convertExp(k, src), convertExp(v, src), [convertGenerator(g, src) | g <- gens]);
+
+Expression convertExp("Await", "object"(expr=node e), loc src) 
+    = await(convertExp(e, src));
+
+Expression convertExp("Yield", node obj, loc src) 
+    = yield(obj.\value? ? just(convertExp(obj.\value, src)) : nothing());    
+
+Expression convertExp("YieldFrom", "object"(\value=node v), loc src) 
+    = yieldFrom(convertExp(v, src));
+
 Expression convertExp("Constant", "object"(\value=num v), loc src) = constant(number(v), nothing());
 
 Expression convertExp("Constant", "object"(\value=str s), loc src) = constant(string(s), nothing());
 
 Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) = \keyword(id(i), convertExp(v, src));
+
+Comprehension convertGenerator("object"(target=node target, iter=node iter, ifs=list[node] ifs, isAsync=int isAsync), loc src) 
+    = comprehension(
+        convertExp(target, src),
+        convertExp(iter, src),
+        [convertExp(i, src) | i <- ifs],
+        isAsync == 1
+    );
+
+    // Expression target, Expression iter, list[Expression] ifs, int isAsync
 
 Expression convertOp("Add", Expression l, Expression r) = add(l, r);
 Expression convertOp("Sub", Expression l, Expression r) = sub(l, r);

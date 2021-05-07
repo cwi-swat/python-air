@@ -133,7 +133,7 @@ data CmpOp
   | \notin()
   ;
 
-data Comprehension = comprehension(Expression target, Expression iter, list[Expression] ifs, int isAsync);
+data Comprehension = comprehension(Expression target, Expression iter, list[Expression] ifs, bool isAsync);
 
 data ExceptHandler(loc src = |unknown:///|) 
   = exceptHandler(Maybe[Expression] \type, Maybe[Identifier] optName, list[Statement] body);
