@@ -29,6 +29,8 @@ module lang::python::Parse
 extend lang::python::AST;
 import util::ShellExec;
 import util::SystemAPI;
+import util::FileSystem;
+import util::Benchmark;
 import lang::json::IO;
 import IO;
 import Type;
@@ -318,7 +320,7 @@ Statement convertStat("ImportFrom", node obj:"object"(names=list[node] aliases),
 Statement convertStat("Global", "object"(names=list[str] names), loc src) 
     = global(names);
 
-Statement convertStat("NonLocal", "object"(names=list[str] names), loc src) 
+Statement convertStat("Nonlocal", "object"(names=list[str] names), loc src) 
     = nonlocal(names);
 
 Statement convertStat("Pass", _, loc src) = pass();
@@ -604,14 +606,17 @@ private str pythonParserCode()
 private int \int(value v) = typeCast(#int, v);
 private list[node] nodes(value v) = typeCast(#list[node], v);
 
-void main(loc input = |unknown:///|) {
-    if (exists(input)) {
-        iprintln(parsePythonModule(input));
-    }
-    else {
-        tempDir = |file:///| + getSystemProperty("java.io.tmpdir");
+void main() {
+    count = 0;
 
-        pythonInputFile = tempDir + "parsePython.py";
-        iprintln(parsePythonModule(pythonInputFile));
-    }
+    millis = cpuTime(() {
+        ignores = {"test_client.py", "buffer.py", "key_bindings.py"};
+
+        for (loc path <- pythonPath(), fs := crawl(path), /loc src := fs, src.file notin ignores, src.extension == "py") { 
+            count += 1;
+            println("<count> : <src>"); 
+        }
+    });
+
+    println("Parsing <count> Python modules cost <millis / (1000 * 1000 * 1000.0)> seconds");
 }
