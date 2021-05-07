@@ -103,8 +103,33 @@ Expression convertExp(node obj:"object"(_type=str typ), loc src)
 
 Expression convertExp("Expression", node obj, loc src) = convertExp(obj.body, src);
 
+Expression convertExp("Attribute", "object"(\value=node v, attr=str a, ctx=node ctx), loc src)
+    = attribute(convertExp(v, src), id(a), convertCtx(ctx));
+
+Expression convertExp("Subscript", "object"(\value=node v, slice=node slice, ctx=node ctx), loc src)
+    = subscript(convertExp(v, src), convertExp(slice, src), convertCtx(ctx));
+
+Expression convertExp("Subscript", "object"(\value=node v, ctx=node ctx), loc src)
+    = starred(convertExp(v, src), convertCtx(ctx));
+
+Expression convertExp("Name", "object"(\id=str i, ctx=node ctx), loc src)
+    = name(id(i), convertCtx(ctx));
+
+Expression convertExp("Tuple", "object"(elts=list[node] elts, ctx=node ctx), loc src)
+    = \tuple([convertExp(e, src) | e <- elts], convertCtx(ctx));
+
 Expression convertExp("Lambda", "object"(args=node args, body=node body), loc src) 
     = lambda(convertArgs(args, src), convertExp(body, src));
+
+Expression convertExp("Slice", node obj, loc src) 
+    = \slice(
+        obj.lower? ? just(convertExp(obj.lower, src)) : nothing(),
+        obj.upper? ? just(convertExp(obj.upper, src)) : nothing(),
+        obj.step? ? just(convertExp(obj.step, src)) : nothing()
+    );
+
+Expression convertExp("JoinedStr", "object"(values=list[node] values), loc src)
+   = joinedStr([convertExp(e, src) | e <- values]);
 
 Expression convertExp("BinOp", "object"(op=node op, \left=node lhs, \right=node rhs), loc src) 
     = convertOp(op._type, convertExp(lhs, src), convertExp(rhs, src));
@@ -123,6 +148,14 @@ Expression convertExp("Call", "object"(func=node f, args=list[node] as, keywords
         [convertExp(a, src) | a <- as], 
         [convertKeyword(kw, src) | kw <- kws] 
     );
+
+Expression convertExp("FormattedValue", node obj:"object"(\value=node v), loc src)
+    = formattedValue(
+        convertExp(v, src), 
+        obj.conversion? ? just(convertConv(\int(obj.conversion))) : nothing(), 
+        obj.formatSpec? ? just(convertExp(obj.formatSpec, src)) : nothing()
+    );
+
 
 Expression convertExp("List", "object"(elts=list[node] elts, ctx=node ctx), loc src) 
     = \list([convertExp(e, src) | e <- elts], convertCtx(ctx));
@@ -151,7 +184,7 @@ Expression convertExp("SetComp", "object"(elt=node e, generators=list[node] gens
 Expression convertExp("GeneratorExp", "object"(elt=node e, generators=list[node] gens), loc src)
     = generatorExp(convertExp(e, src), [convertGenerator(g, src) | g <- gens]);
 
-Expression convertExp("DictComp", "object"(key=node k, \value=v, generators=list[node] gens), loc src)
+Expression convertExp("DictComp", "object"(key=node k, \value=node v, generators=list[node] gens), loc src)
     = dictComp(convertExp(k, src), convertExp(v, src), [convertGenerator(g, src) | g <- gens]);
 
 Expression convertExp("Await", "object"(expr=node e), loc src) 
@@ -177,6 +210,11 @@ CmpOp convertCompOp("Is") = is();
 CmpOp convertCompOp("IsNot") = isnot();
 CmpOp convertCompOp("In") = \in();
 CmpOp convertCompOp("NotIn") = \notin();
+
+Conversion convertConv(int i) = noFormatting() when i == -1;
+Conversion convertConv(115) = stringFormatting();
+Conversion convertConv(114) = reprFormatting();
+Conversion convertConv(97) = asciiFormatting();
 
 Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) = \keyword(id(i), convertExp(v, src));
 

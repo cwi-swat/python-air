@@ -94,10 +94,11 @@ data Expression
   | yieldFrom(Expression \value)
   | compare(Expression lhs, list[CmpOp] ops, list[Expression] comparators)
   | call(Expression func, list[Expression] args, list[Keyword] keywords)
-  | formattedValue(Expression \value, Maybe[int] conversion, Maybe[Expression] formatSpec)
+  | formattedValue(Expression \value, Maybe[Conversion] conversion, Maybe[Expression] formatSpec)
   | joinedStr(list[Expression] values)
   | constant(Constant \const, Maybe[str] kind)
   ;
+
 
 // The following expression can appear only in assignment context  
 data Expression
@@ -120,12 +121,19 @@ data ExprContext
   | del()
   ;
 
+data Conversion 
+  = noFormatting()
+  | stringFormatting()
+  | reprFormatting()
+  | asciiFormatting()
+  ;
+
 data CmpOp 
   = eq() 
   | noteq() 
   | lt() 
   | lte() 
-  | gr() 
+  | gt() 
   | gte() 
   | is() 
   | isnot() 
