@@ -6,29 +6,38 @@ import util::SystemAPI;
 import lang::json::IO;
 import IO;
 import Type;
+import ValueIO;
 
 @synopsis="Installs the ast2json Python library using pip3"
 public void installRequirements() {
     println(exec("pip3", args=["install", "ast2json"]));
 }
 
+@synopsis="Retrieves the search path for python files using the sys.path constant"
+public list[loc] pythonPath() {
+    lst=exec("python3", args=["-c", "import sys;print(sys.path)"]);
+    println("lst: <lst>");
+    lst=visit (lst) {
+        case /\'/ => "\""
+    }
+    println("lst2: <lst>");
+    return [ |file:///| + e | e <- readTextValueString(#list[str], lst)];
+}
+
 @synopsis="parses a python expression producing an AST of type Expression"
-public Expression parsePythonExpression(str input, loc src) {
-    json = importAST(input);
-    return convertExp(json, src);
-}
+public Expression parsePythonExpression(str input, loc src) 
+    = convertExp(importAST(input), src);
 
 @synopsis="parses a python statement producing an AST of type Expression"
-public Statement parsePythonStatement(str input, loc src) {
-    json = importAST(input);
-    return convertStat(json, src);
-}
+public Statement parsePythonStatement(str input, loc src) 
+    = convertStat(importAST(input), src);
 
 @synopsis="parses a python statement producing an AST of type Expression"
-public Module parsePythonModule(str input, loc src) {
-    json = importAST(input);
-    return convertModule(json, src);
-}
+public Module parsePythonModule(str input, loc src) 
+    = convertModule(importAST(input), src);
+
+public Module parsePythonModule(loc src) 
+    = convertModule(importAST(readFile(src)), src);
 
 @synopsis="wraps the python ast library as an external system process"
 @description{
