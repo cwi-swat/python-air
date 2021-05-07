@@ -58,7 +58,7 @@ node importAST(str input) {
 }
 
 Module convertModule("object"(_type="Module", body=list[node] body, type_ignores=list[node] type_ignores), loc src) 
-    = \module([convertStat(s, src) | s <- body], [convertTypeIgnore(i, src) | i <- type_ignores]);
+    = \module([convertStat(s, src) | s <- body], [convertTypeIgnore(i) | i <- type_ignores]);
 
 Module convertModule("object"(_type="Expression", expr=node body), loc src) 
     = \expression(convertExp(body, src));    
@@ -270,7 +270,11 @@ Statement convertStat("Import", "object"(aliases=list[node] aliases), loc src)
     = \import([convertAlias(a) | a <- aliases]);
 
 Statement convertStat("ImportFrom", node obj:"object"(aliases=list[node] aliases), loc src)
-    = \import(obj.\module? ? just(id(obj.\module)) : nothing(), [convertAlias(a, src) | a <- aliases]);
+    = \importFrom(
+        obj.\module? ? just(id(obj.\module)) : nothing(), 
+        [convertAlias(a) | a <- aliases],
+        obj.level? ? just(obj.level) : nothing()
+    );
 
 Statement convertStat("Global", "object"(names=list[str] names), loc src) 
     = global([id(i) | i <- names]);
@@ -497,7 +501,7 @@ Arg convertArg(
             ? src(0,1,<\int(obj.lineno), \int(obj.col_offset)>,<\int(obj.end_lineno), \int(obj.end_col_offset)>) 
             : src];
 
-TypeIgnore convertTypeIgnore("object"(_type="TypeIgnore", lineno=int l, \tag=str t), loc _ /*src*/)
+TypeIgnore convertTypeIgnore("object"(_type="TypeIgnore", lineno=int l, \tag=str t))
     = typeIgnore(l, t);
 
 private str pythonParserCode()
