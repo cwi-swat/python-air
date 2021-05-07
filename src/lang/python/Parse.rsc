@@ -132,7 +132,7 @@ Statement convertStat("FunctionDef",
     ),
     loc src)
     = functionDef(
-        id(name), 
+        name, 
         convertArgs(formals, src), 
         [convertStat(s, src) | s <- body], 
         [convertExp(e, src) | e <- decorators], 
@@ -149,7 +149,7 @@ Statement convertStat("AsyncFunctionDef",
     ),
     loc src)
     = asyncFunctionDef(
-        id(name), 
+        name, 
         convertArgs(formals, src), 
         [convertStat(s, src) | s <- body], 
         [convertExp(e, src) | e <- decorators], 
@@ -167,7 +167,7 @@ Statement convertStat("ClassDef",
     ),
     loc src)
     = classDef(
-        id(name),
+        name,
         [convertExp(b, src) | b <- bases],
         [convertKeyword(k, src) | k <- keywords],
         [convertStat(s, src) | s <- body],
@@ -315,16 +315,16 @@ Statement convertStat("Import", "object"(names=list[node] aliases), loc src)
 
 Statement convertStat("ImportFrom", node obj:"object"(aliases=list[node] aliases), loc src)
     = \importFrom(
-        obj.\module? ? just(id(obj.\module)) : nothing(), 
+        obj.\module? ? just(obj.\module) : nothing(), 
         [convertAlias(a) | a <- aliases],
         obj.level? ? just(obj.level) : nothing()
     );
 
 Statement convertStat("Global", "object"(names=list[str] names), loc src) 
-    = global([id(i) | i <- names]);
+    = global(names);
 
 Statement convertStat("NonLocal", "object"(names=list[str] names), loc src) 
-    = nonlocal([id(i) | i <- names]);
+    = nonlocal(names);
 
 Statement convertStat("Pass", _, loc src) = pass();
 Statement convertStat("Break", _, loc src) = \break();
@@ -342,7 +342,7 @@ Expression convertExp("Expr", node obj, loc src) = convertExp(obj.\value, src);
 Expression convertExp("Expression", node obj, loc src) = convertExp(obj.body, src);
 
 Expression convertExp("Attribute", "object"(\value=node v, attr=str a, ctx=node ctx), loc src)
-    = attribute(convertExp(v, src), id(a), convertCtx(ctx));
+    = attribute(convertExp(v, src), a, convertCtx(ctx));
 
 Expression convertExp("Subscript", "object"(\value=node v, slice=node slice, ctx=node ctx), loc src)
     = subscript(convertExp(v, src), convertExp(slice, src), convertCtx(ctx));
@@ -351,7 +351,7 @@ Expression convertExp("Subscript", "object"(\value=node v, ctx=node ctx), loc sr
     = starred(convertExp(v, src), convertCtx(ctx));
 
 Expression convertExp("Name", "object"(\id=str i, ctx=node ctx), loc src)
-    = name(id(i), convertCtx(ctx));
+    = name(i, convertCtx(ctx));
 
 Expression convertExp("Tuple", "object"(elts=list[node] elts, ctx=node ctx), loc src)
     = \tuple([convertExp(e, src) | e <- elts], convertCtx(ctx));
@@ -378,7 +378,7 @@ Expression convertExp("Compare", "object"(left=node first, ops=list[node] ops, c
 Expression convertExp("UnaryOp", "object"(op=node op, operand=node arg), loc src) 
     = convertOp(op._type, convertExp(arg, src));    
 
-Expression convertExp("Name", "object"(ctx=node c, id=str n), loc src) = name(id(n), convertCtx(c));
+Expression convertExp("Name", "object"(ctx=node c, id=str n), loc src) = name(n, convertCtx(c));
 
 Expression convertExp("Call", "object"(func=node f, args=list[node] as, keywords=list[node] kws), loc src) 
     = call(
@@ -443,7 +443,7 @@ WithItem convertItem(node obj:"object"(context_expr=node c), loc src)
     = withItem(convertExp(c, src), obj.optional_vars? ? just(convertExp(obj.optional_vars, src)) : nothing());
 
 Alias convertAlias(node obj:"object"(name=str name))
-    = \alias(id(name), obj.asname? ? just(id(obj.asname)) : nothing());
+    = \alias(name, obj.asname? ? just(obj.asname) : nothing());
 
 ExceptHandler convertHandler(
     node obj:"object"(
@@ -452,7 +452,7 @@ ExceptHandler convertHandler(
     loc src)
     = exceptHandler(
         obj.\type? ? just(convertExp(obj.\type, src)) : nothing(),
-        obj.name? ? just(id(obj.name)) : nothing(),
+        obj.name? ? just(obj.name) : nothing(),
         [convertStat(s, src) | s <- body]
     )[src=obj has lineno 
             ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset)
@@ -488,7 +488,7 @@ Conversion convertConv(114) = reprFormatting();
 Conversion convertConv(97) = asciiFormatting();
 
 Keyword convertKeyword("object"(arg=str i, \value=node v), loc src) 
-    = \keyword(id(i), convertExp(v, src));
+    = \keyword(i, convertExp(v, src));
 
 Comprehension convertGenerator("object"(target=node target, iter=node iter, ifs=list[node] ifs, isAsync=int isAsync), loc src) 
     = comprehension(
@@ -543,7 +543,7 @@ Arg convertArg(
     ),
     loc src)
     = arg(
-        id(a), 
+        a, 
         obj.annotation? ? just(convertExp(obj.annotation, src)) : nothing(),
         obj.type_comment ? just(obj.typeComment) : nothing() 
     )[src=obj has lineno 

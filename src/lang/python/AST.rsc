@@ -17,7 +17,7 @@ module lang::python::AST
 
 extend util::Maybe;
 
-data Identifier = id(str name);
+alias Identifier = str;
 
 data Module 
   = \module(list[Statement] body, list[TypeIgnore] typeIgnores)
