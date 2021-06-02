@@ -19,7 +19,7 @@ extend util::Maybe;
 
 alias Identifier = str;
 
-data Module 
+data Module(loc src=|unknown:///|)
   = \module(list[Statement] body, list[TypeIgnore] typeIgnores)
   | \interactive(list[Statement] body)
   | \expression(Expression expr)

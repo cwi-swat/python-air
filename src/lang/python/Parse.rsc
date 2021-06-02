@@ -38,14 +38,16 @@ import ValueIO;
 import String;
 import List;
 
+loc pythonBin = |file:///usr/local/bin/python3|;
+
 @synopsis="Installs the ast2json Python library using pip3"
 public void installRequirements() {
-    println(exec("pip3", args=["install", "ast2json"]));
+    println(exec(pythonBin.path, args=["install", "ast2json"]));
 }
 
 @synopsis="Retrieves the search path for Python files using the sys.path constant"
 public list[loc] pythonPath() {
-    lst=exec("python3", args=["-c", "import sys;print(sys.path)"]);
+    lst=exec(pythonBin.path, args=["-c", "import sys; print(sys.path)"]);
     lst=visit (lst) {
         case /\'/ => "\""
     }
@@ -59,6 +61,9 @@ private map[int line, int offset] OFFSETS = ();
 @synopsis="parses a python expression producing an AST of type Expression"
 public Expression parsePythonExpression(str input, loc src) 
     = convertExp(importAST(input), src);
+    
+public Expression parsePythonExpression(str input) 
+    = parsePythonExpression(input, |demo:///|);
 
 @synopsis="parses a python statement producing an AST of type Expression"
 public Statement parsePythonStatement(str input, loc src) 
@@ -88,13 +93,20 @@ node importAST(str input) {
     tempDir = |file:///| + getSystemProperty("java.io.tmpdir");
 
     pythonParserFile = tempDir + "parsePython.py";
-    pythonInputFile = tempDir + "pythonInputFile.py";
-
-    writeFile(pythonParserFile, pythonParserCode());
     
+    if (!exists(pythonParserFile)) {
+        println("Python parser stored at: <pythonParserFile>");
+        writeFile(pythonParserFile, pythonParserCode());
+    }
+
+    pythonInputFile = tempDir + "pythonInputFile.py"; 
     writeFile(pythonInputFile, input);
 
-    output = exec("python3", args=[pythonParserFile.path, pythonInputFile.path]);
+    output = exec(pythonBin.path, args=[pythonParserFile.path, pythonInputFile.path]);
+    
+    if (output == "") {
+      throw "running external Python parser failed";
+    }
     
     return parseJSON(#node, output);
 }
@@ -102,16 +114,16 @@ node importAST(str input) {
 // modules
 
 Module convertModule("object"(_type="Module", body=list[node] body, type_ignores=list[node] type_ignores), loc src) 
-    = \module([convertStat(s, src) | s <- body], [convertTypeIgnore(i) | i <- type_ignores]);
+    = \module([convertStat(s, src) | s <- body], [convertTypeIgnore(i) | i <- type_ignores], src=src);
 
 Module convertModule("object"(_type="Expression", expr=node body), loc src) 
-    = \expression(convertExp(body, src));    
+    = \expression(convertExp(body, src), src=src);    
 
 Module convertModule("object"(_type="Interactive", body=list[node] body), loc src) 
-    = \interactive([convertStat(s, src) | s <- body]);    
+    = \interactive([convertStat(s, src) | s <- body], src=src);    
 
 Module convertModule("object"(_type="FunctionType", argtypes=list[node] argtypes, expr=node returns), loc src) 
-    = \functionType([convertExp(e, src) | e <- argtypes], convertExp(returns, src));
+    = \functionType([convertExp(e, src) | e <- argtypes], convertExp(returns, src), src=src);
 
 // statements
 
@@ -120,6 +132,8 @@ Statement convertStat(node obj:"object"(_type=str typ), loc src)
         [src=obj has lineno 
             ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset) 
             : src];
+
+Statement convertStat("Module", node obj, loc src) = convertStat(nodes(obj.body)[0], src);
 
 Statement convertStat("Expr", node obj, loc src)
     = expr(convertExp(obj, src));
@@ -333,6 +347,13 @@ Expression convertExp(node obj:"object"(_type=str typ), loc src)
         [src=obj has lineno 
             ? \loc(src, obj.lineno, obj.col_offset, obj.end_lineno, obj.end_col_offset)
             : src];
+            
+default Expression convertExp(value v, loc src) {
+   iprintln(v);
+   throw "unsupported value <v>";
+}            
+
+Expression convertExp("Module", node obj, loc src) = convertExp(nodes(obj.body)[0], src);
 
 Expression convertExp("Expr", node obj, loc src) = convertExp(obj.\value, src);
 
@@ -392,6 +413,9 @@ Expression convertExp("FormattedValue", node obj:"object"(\value=node v), loc sr
     );
 
 
+Expression convertExp("NamedExpr", "object"(target=node t, \value=node v), loc src)
+    = \namedExpr(convertExp(t, src), convertExp(v, src));
+     
 Expression convertExp("List", "object"(elts=list[node] elts, ctx=node ctx), loc src) 
     = \list([convertExp(e, src) | e <- elts], convertCtx(ctx));
 
@@ -573,7 +597,7 @@ map[int line, int offset] offsets(str input) {
     lines = split("\n", input);
     result = for (int i <- index(lines)) {
         append <i + 1, offset>;
-        offset += size(lines[i]);
+        offset += size(lines[i]) + 1;
     }
 
     return (ind : off | <ind, off> <- result);
@@ -598,7 +622,7 @@ private str pythonParserCode()
       '
       'theAst = ast.parse(data)
       'theAstAsJson = ast2json(theAst)
-      'theJsonAstAsString = json.dumps(theAstAsJson)
+      'theJsonAstAsString = json.dumps(theAstAsJson, indent=2)
       '
       'print(theJsonAstAsString)
       ";
@@ -610,10 +634,9 @@ void main() {
     count = 0;
 
     millis = cpuTime(() {
-        ignores = {"test_client.py", "buffer.py", "key_bindings.py", "process.py", "ElementTree.py", "saxutils.py",
-        "ast.py", "_header_value_parser.py", "headerregistry.py"};
+        ignores = {};
 
-        for (loc path <- pythonPath(), fs := crawl(path), /loc src := fs, src.file notin ignores, src.extension == "py") { 
+        for (loc path <- |project://quality-time|.ls, fs := crawl(path), /loc src := fs, src.file notin ignores, src.extension == "py") { 
             count += 1;
             println("<count> : <src>"); 
             p = parsePythonModule(src);
