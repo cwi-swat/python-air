@@ -105,7 +105,7 @@ node importAST(str input) {
     output = exec(pythonBin.path, args=[pythonParserFile.path, pythonInputFile.path]);
     
     if (output == "") {
-      throw "running external Python parser failed";
+      throw "running external Python parser failed on <input>";
     }
     
     return parseJSON(#node, output);
