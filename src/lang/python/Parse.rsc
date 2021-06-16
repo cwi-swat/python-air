@@ -68,6 +68,9 @@ public Expression parsePythonExpression(str input)
 @synopsis="parses a python statement producing an AST of type Expression"
 public Statement parsePythonStatement(str input, loc src) 
     = convertStat(importAST(input), src);
+    
+public Statement parsePythonStatement(str input) 
+    = parsePythonStatement(input, |demo:///|);
 
 @synopsis="parses a python module producing an AST of type Module"
 public Module parsePythonModule(str input, loc src) 
