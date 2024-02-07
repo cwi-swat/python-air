@@ -55,7 +55,7 @@ public list[loc] pythonPath() {
         + [ f | e <- readTextValueString(#list[str], lst), e != "", loc f := |file:///| + e, exists(f)];
 }
 
-@doc{this global caches the offsets for every line number during the processing of a single Python input string}
+@synopsis{this global caches the offsets for every line number during the processing of a single Python input string}
 private map[int line, int offset] OFFSETS = ();
 
 @synopsis="parses a python expression producing an AST of type Expression"
