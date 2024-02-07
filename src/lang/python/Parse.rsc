@@ -636,7 +636,7 @@ private list[node] nodes(value v) = typeCast(#list[node], v);
 void main() {
     count = 0;
 
-    millis = cpuTime(() {
+    millis = cpuTimeOf(() {
         ignores = {};
 
         for (loc path <- |project://quality-time|.ls, fs := crawl(path), /loc src := fs, src.file notin ignores, src.extension == "py") { 
