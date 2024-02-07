@@ -105,7 +105,7 @@ node importAST(str input) {
     pythonInputFile = tempDir + "pythonInputFile.py"; 
     writeFile(pythonInputFile, input);
 
-    output = exec(pythonBin.path, args=[pythonParserFile.path, pythonInputFile.path]);
+    output = exec(pythonBin, args=[pythonParserFile, pythonInputFile]);
     
     if (output == "") {
       throw "running external Python parser failed on <input>";
