@@ -6,4 +6,6 @@
   * executes that Python program using util::ShellExec::exec
   * reads the JSON and normalizes it towards a Rascal AST shape
   * takes care to retain position information on all AST nodes
+* lang::xml::junit contains XML bindings for JUnit test suite reports.
+  * this should probably be in the standard library in the future.
 * this is quite experimental for now.
