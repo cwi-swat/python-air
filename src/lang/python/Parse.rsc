@@ -152,7 +152,7 @@ Statement convertStat("FunctionDef",
         name, 
         convertArgs(formals, src), 
         [convertStat(s, src) | s <- body], 
-        obj.decorators? ? [convertExp(e, src) | e <- nodes(obj.decorators)] : [],
+        obj.decorator_list? ? [convertExp(e, src) | e <- nodes(obj.decorator_list)] : [],
         obj.returns? ? just(convertExp(obj.returns, src)) : nothing(),
         obj.typeComment? ? just(obj.typeComment) : nothing()
     );
