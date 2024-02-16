@@ -12,16 +12,16 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 }
 @synopsis{Uses the Python AST library to parse Python code and then maps it to a Rascal data-type}
 @description{
-    This module provides functions to produce abstract syntax trees for Python code.
-    It supports expressions, statements and modules as top-level nodes.
+This module provides functions to produce abstract syntax trees for Python code.
+It supports expressions, statements and modules as top-level nodes.
 
-    The functionality provided here depends heavily on the shape of the ASTs provided
-    by the Python AST library. This AST format is rather abstract and does *not*
-    retain the order of appearance of syntactical constructs in a file. It does
-    provide start and end line/column information for all expressions and statements.
+The functionality provided here depends heavily on the shape of the ASTs provided
+by the Python AST library. This AST format is rather abstract and does *not*
+retain the order of appearance of syntactical constructs in a file. It does
+provide start and end line/column information for all expressions and statements.
 
-    This module is focused on enabling the most basic Python *analysis* in Rascal. It does not
-    feature Python transformation features.
+This module is focused on enabling the most basic Python *analysis* in Rascal. It does not
+feature Python transformation features.
 }
 @author{Jurgen J. Vinju}
 module lang::python::Parse
@@ -82,14 +82,14 @@ public Module parsePythonModule(loc src)
 
 @synopsis="wraps the python ast library as an external system process"
 @description{
-    This function starts the python3 interpreter to have access
-    to the ast.parse function from Python's standard library.
-    The output of the parser is mapped to JSON and then imported
-    into a rascal data-structure that can be converted later.
+This function starts the python3 interpreter to have access
+to the ast.parse function from Python's standard library.
+The output of the parser is mapped to JSON and then imported
+into a rascal data-structure that can be converted later.
 
-    This function should not be used by clients, but it can
-    be called for debugging purposes since it reflects an 
-    intermediate stage.
+This function should not be used by clients, but it can
+be called for debugging purposes since it reflects an 
+intermediate stage.
 }
 node importAST(str input) {
     OFFSETS = offsets(input);
