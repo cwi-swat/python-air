@@ -38,16 +38,16 @@ import ValueIO;
 import String;
 import List;
 
-loc pythonBin = |file:///usr/local/bin/python3|;
+loc pythonBin = exists(|PATH://python3|) ? |PATH://python3| : |PATH://python|;
 
 @synopsis="Installs the ast2json Python library using pip3"
 public void installRequirements() {
-    println(exec(pythonBin.path, args=["install", "ast2json"]));
+    println(exec(pythonBin, args=["-m", "pip", "install", "ast2json"]));
 }
 
 @synopsis="Retrieves the search path for Python files using the sys.path constant"
 public list[loc] pythonPath() {
-    lst=exec(pythonBin.path, args=["-c", "import sys; print(sys.path)"]);
+    lst=exec(pythonBin, args=["-c", "import sys; print(sys.path)"]);
     lst=visit (lst) {
         case /\'/ => "\""
     }
