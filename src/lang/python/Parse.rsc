@@ -38,7 +38,7 @@ import ValueIO;
 import String;
 import List;
 
-loc pythonBin = exists(|PATH://python3|) ? |PATH://python3| : |PATH://python|;
+loc pythonBin = exists(|PATH:///python3|) ? |PATH:///python3| : |PATH:///python|;
 
 @synopsis="Installs the ast2json Python library using pip3"
 public void installRequirements() {
