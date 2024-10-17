@@ -1,4 +1,9 @@
 
+## 0.0.7
+
+* maintenance release to be up to date with latest rascal version
+
+
 ## 0.0.1, 0.0.2
 
 * python-air wraps "libast" from the Python standard library to parse Python code.
