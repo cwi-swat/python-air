@@ -92,7 +92,6 @@
                             <goal>tutor</goal>
                         </goals>
                         <configuration>
-                            <enableStandardLibrary>true</enableStandardLibrary>
                             <errorsAsWarnings>false</errorsAsWarnings>
                             <bin>${project.build.outputDirectory}</bin>
                             <sources>|http://github.com/cwi-swat/python-air/blob/main|</sources>
