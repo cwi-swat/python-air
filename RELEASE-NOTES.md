@@ -1,3 +1,6 @@
+## 0.0.8 - 0.0.11
+
+* Updated to `rascal` 0.43.0 and `rascal-maven-plugin` 0.32.2
 
 ## 0.0.7
 
